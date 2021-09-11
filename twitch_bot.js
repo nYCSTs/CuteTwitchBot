@@ -1,6 +1,7 @@
 const tmi = require('tmi.js');
 require('dotenv').config();
 
+let timer;
 let startTime;
 let blank = false;
 const latestBans = {};
@@ -49,7 +50,7 @@ function msToTime(duration) {
 function startEDTimer(channel) {
   return setInterval(() => {
     client.say(channel, '+ed');
-  }, [3600100]);
+  }, [3600500]);
 };
 
 function antiSpam() {
@@ -99,8 +100,10 @@ function onMessageHandler(channel, context, msg, self) {
       }
       // force ed
       else if (userMessage[0] === '*fed' && context['display-name'] === process.env.USER) {
-        clearInterval(timer);
         client.say(channel, '+ed');
+        if (timer) {
+          clearInterval(timer);
+        }
         timer = startEDTimer(channel);
         return;
       }

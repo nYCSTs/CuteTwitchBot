@@ -5,7 +5,7 @@ let startTime;
 let blank = false;
 const latestBans = {};
 const blankText = ' 󠀀󠀀󠀀󠀀󠀀󠀀';
-const channels = process.env.CHANNELS.split(', ')
+const channels = []
 
 channels.map((ch) => latestBans[ch] = []);
 

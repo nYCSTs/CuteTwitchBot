@@ -1,15 +1,14 @@
 const tmi = require('tmi.js');
 require('dotenv').config();
 
-let timer;
-let startTime;
-let blank = false;
-const latestBans = {};
-const blankText = ' 󠀀󠀀󠀀󠀀󠀀󠀀';
-const channels = [
-  'ablacs',
-  // 'forsen'
-]
+let timer; // +ed timer
+let startTime; // start operation time
+const blankText = ' 󠀀󠀀󠀀󠀀󠀀󠀀'; // appended text when the previous message is the same
+const latestBans = {}; // bans list
+let lastSentMessage = '' // the last sent message by the bot
+let timeSinceLastMessage;
+
+const channels = []
 
 channels.map((ch) => latestBans[ch] = []);
 
@@ -21,12 +20,11 @@ const client = new tmi.Client({
   channels
 });
 
-setTimeout(() => client.on('message', onMessageHandler), 1000);
+client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 client.on('ban', onBanUserHandler);
 
 client.connect();
-
 
 function msToTime(duration) {
   let strTime = '';
@@ -53,10 +51,6 @@ function startEDTimer(channel) {
   }, [3600500]);
 };
 
-function antiSpam() {
-  setTimeout(() => {}, 3000);
-}
-
 function onMessageHandler(channel, context, msg, self) {
   if (self || context['username'] === 'Supibot') { return; }
 
@@ -81,18 +75,30 @@ function onMessageHandler(channel, context, msg, self) {
       // AYAYA
       else if (userMessage[0] === 'AYAYA') {
         message = `@${context['display-name']} AYAYA`;
+        if (lastSentMessage === message) {
+          message = message.concat(blankText)
+        }
       }
       // nyanPls
       else if (userMessage[0] === 'nyanPls') {
         message = '✨ nyanPls 🌸  ';
+        if (lastSentMessage === message) {
+          message = message.concat(blankText)
+        }
       }
       // cute chat
       else if (userMessage[0] === '*cute') {
         message = '🌸 ✌ ️ AYAYA ✨ ⣰⠟⢷⡀⣿⠄⣿⠘⢻⡟⠃⣿⠛⠛⠄⠄⣰⠟⢷⡀⣿⠄⣿⠄⢠⣿⠄⠛⣿⠛ ⣿⠄⠄⠄⣿⠄⣿⠄⢸⡇⠄⣿⠶⠶⠄⠄⣿⠄⠄⠄⣿⠶⣿⠄⣼⣈⡇⠄⣿⠄ ⠹⣦⡾⠁⠻⣤⠟⠄⢸⡇⠄⣿⣤⣤⠄⠄⠹⣦⡾⠁⣿⠄⣿⢠⡏⠉⢻⠄⣿⠄'
+        if (lastSentMessage === message) {
+          message = message.concat(blankText)
+        }
       }
       // paag
       else if (userMessage[0] === '*pag') {
         message = 'PagMan 🤘 ⣿⣯⣷⢈⣹⣿⠿⡟⢛⡛⢿⡟⠛⣿⣿⡟⠛⣿⣿⠟⠻⣿⡟⢛⡛⢿⡿⢛⡛⢿ ⣉⣛⠛⠉⠁⠄⠄⡇⢈⣁⣼⠁⠇⠸⡿⠠⠇⢹⡟⠰⠆⢻⠄⢿⡉⢹⡀⢾⡉⢹ ⡿⠌⠛⠢⣄⣀⣠⣧⣼⣿⣧⣼⣿⣤⣧⣼⣿⣤⣥⣾⣧⣬⣷⣬⣥⣼⣷⣤⣤⣼ '
+        if (lastSentMessage === message) {
+          message = message.concat(blankText)
+        }
       }
       // join raid
       else if (userMessage[0] === '*join') {
@@ -125,11 +131,14 @@ function onMessageHandler(channel, context, msg, self) {
       break;
   };
   if (message) {
-    client.say(channel, `${blank ? message : message.concat(blankText)}`)
-    blank = !blank;
-    antiSpam();
+    // general spam protection
+    if (!timeSinceLastMessage || (new Date() - timeSinceLastMessage) >= 2500) {
+      timeSinceLastMessage = new Date();
+      lastSentMessage = message;
+      client.say(channel, message);
+      return;
+    }
   }
-  return;
 }
 
 function onBanUserHandler(channel, username, reason, userstate) {

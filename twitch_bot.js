@@ -92,7 +92,9 @@ function onMessageHandler(channel, context, msg, self) {
       }
       // force ed
       else if (userMessage[0] === '**fed' && context['display-name'] === process.env.BOTRUNNER) {
-        client.say(channel, '+ed');
+        message = `${lastSentMessage === '+ed' ? '+ed'.concat(blankText) : '+ed'}`; 
+        client.say(channel, message);
+        lastSentMessage = message;
         if (timer) {
           clearInterval(timer);
         }

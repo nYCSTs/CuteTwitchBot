@@ -8,7 +8,10 @@ const latestBans = {}; // bans list
 let lastSentMessage = '' // the last sent message by the bot
 let timeSinceLastMessage;
 
-const channels = []
+const channels = [
+  'ablacs',
+  // 'forsen'
+]
 
 channels.map((ch) => latestBans[ch] = []);
 
@@ -60,52 +63,35 @@ function onMessageHandler(channel, context, msg, self) {
   switch (userMessage.length) {
     case 1:
       // Ping
-      if (userMessage[0] === '*ping') {
-        message = `@${context['display-name']} Karen  running for ${msToTime(new Date() - startTime)}.`;
+      if (userMessage[0] === '**ping') {
+        message = `@${context['display-name']} Karen Kujou on duty AYAYA. (${msToTime(new Date() - startTime)}).`;
       }
       // Check current Channel
-      else if (userMessage[0] === '*latest') {
+      else if (userMessage[0] === '**latest') {
         // Check if bans were registered
         if (latestBans[channel.slice(1).toLowerCase()].length) {
           message = `@${context['display-name']} the last banned users were: ${latestBans[channel.slice(1)].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago) `)}`
-        } else {
-          message = `@${context['display-name']} No bans were registered.`
-        }
+        } 
+        message = `@${context['display-name']} No bans were registered.`
       }
       // AYAYA
       else if (userMessage[0] === 'AYAYA') {
         message = `@${context['display-name']} AYAYA`;
-        if (lastSentMessage === message) {
-          message = message.concat(blankText)
-        }
       }
       // nyanPls
       else if (userMessage[0] === 'nyanPls') {
         message = '✨ nyanPls 🌸  ';
-        if (lastSentMessage === message) {
-          message = message.concat(blankText)
-        }
       }
       // cute chat
-      else if (userMessage[0] === '*cute') {
+      else if (userMessage[0] === '**cute') {
         message = '🌸 ✌ ️ AYAYA ✨ ⣰⠟⢷⡀⣿⠄⣿⠘⢻⡟⠃⣿⠛⠛⠄⠄⣰⠟⢷⡀⣿⠄⣿⠄⢠⣿⠄⠛⣿⠛ ⣿⠄⠄⠄⣿⠄⣿⠄⢸⡇⠄⣿⠶⠶⠄⠄⣿⠄⠄⠄⣿⠶⣿⠄⣼⣈⡇⠄⣿⠄ ⠹⣦⡾⠁⠻⣤⠟⠄⢸⡇⠄⣿⣤⣤⠄⠄⠹⣦⡾⠁⣿⠄⣿⢠⡏⠉⢻⠄⣿⠄'
-        if (lastSentMessage === message) {
-          message = message.concat(blankText)
-        }
-      }
-      // paag
-      else if (userMessage[0] === '*pag') {
-        message = 'PagMan 🤘 ⣿⣯⣷⢈⣹⣿⠿⡟⢛⡛⢿⡟⠛⣿⣿⡟⠛⣿⣿⠟⠻⣿⡟⢛⡛⢿⡿⢛⡛⢿ ⣉⣛⠛⠉⠁⠄⠄⡇⢈⣁⣼⠁⠇⠸⡿⠠⠇⢹⡟⠰⠆⢻⠄⢿⡉⢹⡀⢾⡉⢹ ⡿⠌⠛⠢⣄⣀⣠⣧⣼⣿⣧⣼⣿⣤⣧⣼⣿⣤⣥⣾⣧⣬⣷⣬⣥⣼⣷⣤⣤⣼ '
-        if (lastSentMessage === message) {
-          message = message.concat(blankText)
-        }
       }
       // join raid
-      else if (userMessage[0] === '*join') {
+      else if (userMessage[0] === '**join') {
         message = '+join';
       }
       // force ed
-      else if (userMessage[0] === '*fed' && context['display-name'] === process.env.USER) {
+      else if (userMessage[0] === '**fed' && context['display-name'] === process.env.BOTRUNNER) {
         client.say(channel, '+ed');
         if (timer) {
           clearInterval(timer);
@@ -116,10 +102,10 @@ function onMessageHandler(channel, context, msg, self) {
       break;
     case 2:
       // Registered bans on <CHANNEL>
-      if (userMessage[0] === '*latest') {
+      if (userMessage[0] === '**latest') {
         if (Object.keys(latestBans).indexOf(userMessage[1]) !== -1) {
           if (latestBans[userMessage[1]].length) {
-            const message = `@${context['display-name']} the last banned users in ${userMessage[1]} were: ${latestBans[userMessage[1]].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago)`)}`
+            message = `@${context['display-name']} the last banned users in ${userMessage[1]} were: ${latestBans[userMessage[1]].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago)`)}`
             client.say(channel, `${blank ? message : message.concat(blankText)}`);
           } else {
             message = `@${context['display-name']} No bans registered in ${userMessage[1]} channel.`;
@@ -134,8 +120,8 @@ function onMessageHandler(channel, context, msg, self) {
     // general spam protection
     if (!timeSinceLastMessage || (new Date() - timeSinceLastMessage) >= 2500) {
       timeSinceLastMessage = new Date();
+      client.say(channel, `${lastSentMessage === message ? message += blankText : message}`);
       lastSentMessage = message;
-      client.say(channel, message);
       return;
     }
   }
@@ -159,3 +145,4 @@ function onConnectedHandler(addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
   startTime = new Date();
 }
+

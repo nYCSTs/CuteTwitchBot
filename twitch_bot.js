@@ -9,13 +9,16 @@ const latestBans = {}; // bans list
 let lastSentMessage = '' // the last sent message by the bot
 let timeSinceLastMessage;
 let timeSinceWeebCheck;
+let channelsList;
 
-const channels = [
-  'ablacs',
-  'forsen'
-]
+const channels = []
 
 channels.map((ch) => latestBans[ch] = []);
+
+axios.default.get('https://logs.ivr.fi/channels')
+  .then((r) => {
+    channelsList = r.data;
+  });
 
 const client = new tmi.Client({
   identity: {
@@ -36,18 +39,30 @@ function msToTime(duration) {
   const seconds = Math.floor((duration / 1000) % 60);
   const minutes = Math.floor((duration / (1000 * 60)) % 60);
   const hours = Math.floor((duration / (1000 * 60 * 60)) % 24);
+  const days = Math.floor((duration / (1000 * 60 * 60 * 24)));
+  const years = Math.floor(days / 365);
 
   if (hours === 0 && minutes === 0) {
     return `${seconds}s`;
-  } else {
+  } else if (years === 0) {
     if (hours !== 0) {
-      strTime += `${hours}h`;
+      strTime += `${hours}h `;
     }
     if (minutes !== 0) {
-      strTime += `${minutes}m`;
+      strTime += `${minutes}m `;
     }
-    return strTime;
-  };
+    if (days !== 0) {
+      strTime += `${days}d`
+    }
+  } else {
+    if (days !== 0) {
+      strTime += `${days}d `
+    }
+    if (years !== 0) {
+      strTime += `${years}y`
+    }
+  }
+  return strTime;
 };
 
 function startEDTimer(channel) {
@@ -63,12 +78,22 @@ function spamProtection(channel, message, time = 2500) {
     lastSentMessage = message;
     return;
   }
-}
+};
+
+function filterWeebMessages(messages, username) {
+  return messages.filter((msg) => {
+    msg = msg.substring(msg.indexOf(`${username}: `) + username.length + 2, msg.length);
+    return (
+      msg.includes('AYAYA')
+      || msg.includes('nyanPls')
+      || msg.includes('forsenPuke')
+    );
+  });
+};
 
 async function getUserMessages(channel, username) {
   channel = 'forsen';
-  const promise = await axios.default.get(`https://logs.ivr.fi/channel/${channel}/user/${username}`);
-  return promise;
+  return await axios.default.get(`https://logs.ivr.fi/channel/${channel}/user/${username}`);
 };
 
 function onMessageHandler(channel, context, msg, self) {
@@ -117,6 +142,17 @@ function onMessageHandler(channel, context, msg, self) {
         }
         timer = startEDTimer(channel);
         return;
+        // random weeb message
+      } else if (userMessage[0] === '**rwm') {
+        if (channel === '#ablacs' || channelsList.channels.some((ch) => ch.name === channel.slice(1))) {
+          getUserMessages(channel.slice(1), context['display-name'])
+            .then((r) => {
+              const weebMessages = filterWeebMessages(r.data.split('\n'), context['display-name']);
+              const rMessage = weebMessages[Math.floor(Math.random() * weebMessages.length)];
+
+              spamProtection(channel, `(${msToTime(new Date() - new Date(rMessage.substring(1, rMessage.indexOf(' '))))} ago) ${rMessage.substring(rMessage.indexOf(context['display-name'].toLowerCase()))}`);
+            });
+        }
       }
       break;
     case 2:
@@ -137,15 +173,7 @@ function onMessageHandler(channel, context, msg, self) {
       else if (userMessage[0] === '**weeb' && (!timeSinceWeebCheck || (new Date() - timeSinceWeebCheck) >= 10000)) {
         getUserMessages(channel.slice(1), userMessage[1])
           .then((r) => {
-            const messages = r.data.split('\n');
-            const weebMessages = messages.filter((msg) => {
-              msg = msg.substring(msg.indexOf(`${userMessage[1]}: `) + userMessage[1].length + 2, msg.length);
-              return (
-                msg.toLowerCase().includes('ayaya')
-                || msg.toLowerCase().includes('nyanpls')
-                || msg.toLowerCase().includes('forsenpuke')
-              );
-            });
+            const weebMessages = filterWeebMessages(r.data.split('\n'), userMessage[1]);
             if (weebMessages.length) {
               message = `@${context['display-name']} I found ${weebMessages.length} messages with weeb emotes on ${userMessage[1]} logs. AYAYA`;
             } else {
@@ -179,4 +207,3 @@ function onConnectedHandler(addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
   startTime = new Date();
 }
-

@@ -1,6 +1,5 @@
 const tmi = require('tmi.js');
 const axios = require('axios');
-const fs = require('fs');
 require('dotenv').config();
 
 let timer; // +ed timer

@@ -11,7 +11,10 @@ let timeSinceLastMessage;
 let timeSinceWeebCheck;
 let channelsList;
 
-const channels = []
+const channels = [
+  'ablacs',
+  'forsen'
+]
 
 channels.map((ch) => latestBans[ch] = []);
 
@@ -45,21 +48,21 @@ function msToTime(duration) {
   if (hours === 0 && minutes === 0) {
     return `${seconds}s`;
   } else if (years === 0) {
-    if (hours !== 0) {
-      strTime += `${hours}h `;
-    }
-    if (minutes !== 0) {
-      strTime += `${minutes}m `;
-    }
     if (days !== 0) {
       strTime += `${days}d`
     }
-  } else {
-    if (days !== 0) {
-      strTime += `${days}d `
+    if (hours !== 0) {
+      strTime += `${hours}h`;
     }
+    if (minutes !== 0) {
+      strTime += `${minutes}m`;
+    }
+  } else {
     if (years !== 0) {
       strTime += `${years}y`
+    }
+    if (days !== 0) {
+      strTime += `${days}d `
     }
   }
   return strTime;
@@ -96,6 +99,29 @@ async function getUserMessages(channel, username) {
   return await axios.default.get(`https://logs.ivr.fi/channel/${channel}/user/${username}`);
 };
 
+async function getAnimeInfo(title) {
+  const query = `
+    query ($id: Int, $search: String) {
+      Media (id: $id, type: ANIME, search: $search) {
+        id
+        episodes
+        description
+        title {
+          romaji
+        }
+      }
+    }
+  `
+  const variables = {
+    "search": title
+  }
+
+  return await axios.default.post('https://graphql.anilist.co/', {
+    query: query,
+    variables
+  }).then((r) => r.data);
+}
+
 function onMessageHandler(channel, context, msg, self) {
   if (self || context['username'] === 'Supibot') { return; }
 
@@ -106,7 +132,7 @@ function onMessageHandler(channel, context, msg, self) {
     case 1:
       // Ping
       if (userMessage[0] === '**ping') {
-        message = `@${context['display-name']} Karen Kujou on duty AYAYA. (${msToTime(new Date() - startTime)}).`;
+        message = `@${context['display-name']} Karen Kujou on duty AYAYA (${msToTime(new Date() - startTime)}).`;
       }
       // Check current Channel
       else if (userMessage[0] === '**latest') {
@@ -148,8 +174,11 @@ function onMessageHandler(channel, context, msg, self) {
           getUserMessages(channel.slice(1), context['display-name'])
             .then((r) => {
               const weebMessages = filterWeebMessages(r.data.split('\n'), context['display-name']);
+              if (!weebMessages.length) {
+                spamProtection(channel, `${context['display-name']} I couldn't find weeb emotes on your logs.`);
+                return;
+              }
               const rMessage = weebMessages[Math.floor(Math.random() * weebMessages.length)];
-
               spamProtection(channel, `(${msToTime(new Date() - new Date(rMessage.substring(1, rMessage.indexOf(' '))))} ago) ${rMessage.substring(rMessage.indexOf(context['display-name'].toLowerCase()))}`);
             });
         }
@@ -182,9 +211,23 @@ function onMessageHandler(channel, context, msg, self) {
             spamProtection(channel, message, 0);
           });
       }
+      // Anime description
+      else if (userMessage[0] === '**anime') {
+        getAnimeInfo(userMessage[1])
+          .then((r) => {
+            const animeDescription = r.data.Media.description
+              .slice(0, r.data.Media.description.indexOf('<br>'))
+              .replace(/<[^>]*>?/gm, '')
+              .replace('\n', '')
+              .trim();
+            message = `[${r.data.Media.episodes} EP] ${animeDescription.length > 180 ? animeDescription.slice(0, 180).concat('...') : animeDescription}`;
+            spamProtection(channel, message);
+          });
+      }
       break;
   };
   if (message) {
+    console.log(`${context['display-name']} [username]: ${userMessage} [usermessage] ${message} [output]`);
     spamProtection(channel, message);
   }
 }

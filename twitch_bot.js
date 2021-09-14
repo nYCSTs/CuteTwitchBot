@@ -232,19 +232,17 @@ function onMessageHandler(channel, context, msg, self) {
   }
 }
 
-function onBanUserHandler(channel, username, reason, userstate) {
-  if (latestBans[channel.slice(1)].length === 5) {
-    latestBans[channel.slice(1)][0] = {
-      username,
-      time: new Date(),
-    };
-    return;
-  }
-  latestBans[channel.slice(1)].push({
+function onBanUserHandler(channel, username) {
+  const bannedUser = {
     username,
     time: new Date(),
-  });
-}
+  };
+  if (latestBans[channel.slice(1)].length === 5) {
+    latestBans[channel.slice(1)][0] = bannedUser;
+    return;
+  }
+  latestBans[channel.slice(1)].push(bannedUser);
+};
 
 function onConnectedHandler(addr, port) {
   console.log(`* Connected to ${addr}:${port}`);

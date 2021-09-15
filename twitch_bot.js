@@ -136,7 +136,7 @@ async function getRandomPasta() {
 }
 
 function onMessageHandler(channel, context, msg, self) {
-  if (self || context['display-name'] === 'Supibot') { return; }
+  if (self || (new Date().getHours > 14 && new Date().getHours < 20) || context['display-name'] === 'Supibot') { return; }
 
   const userMessage = msg
     .replace('󠀀', '')

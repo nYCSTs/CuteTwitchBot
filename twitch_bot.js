@@ -2,26 +2,23 @@ const tmi = require('tmi.js');
 const axios = require('axios');
 require('dotenv').config();
 
-let timer; // +ed timer
-let startTime; // start operation time
-const blankText = ' 󠀀󠀀󠀀󠀀󠀀󠀀'; // appended text when the previous message is the same
-const latestBans = {}; // bans list
-let lastSentMessage = '' // the last sent message by the bot
-let timeSinceLastMessage;
-let timeSinceWeebCheck;
-let channelsList;
+let timer;                    // +ED TIME
+let startTime;                // BOT START TIME
+const blankText = ' 󠀀󠀀󠀀󠀀󠀀󠀀';        // BLANK TEXT
+const latestBans = {};        // BAN LIST
+let lastSentMessage = ''      // LAST MESSAGE SENT
+let timeSinceLastMessage;     // TIME SINCE LAST MESSAGE. SPAM CONTROL
+const channelsList = [];      // CHANNELS THAT ARE MONITORED BY justlog
 
 const channels = [
   'ablacs',
+  'gugafuedon',
   'forsen'
 ]
 
 channels.map((ch) => latestBans[ch] = []);
 
-axios.default.get('https://logs.ivr.fi/channels')
-  .then((r) => {
-    channelsList = r.data;
-  });
+axios.default.get('https://logs.ivr.fi/channels').then((r) => r.data.channels.map((ch) => channelsList.push(ch.name)));
 
 const client = new tmi.Client({
   identity: {
@@ -45,25 +42,20 @@ function msToTime(duration) {
   const days = Math.floor((duration / (1000 * 60 * 60 * 24)));
   const years = Math.floor(days / 365);
 
-  if (hours === 0 && minutes === 0) {
-    return `${seconds}s`;
-  } else if (years === 0) {
-    if (days !== 0) {
-      strTime += `${days}d`
-    }
-    if (hours !== 0) {
-      strTime += `${hours}h`;
-    }
-    if (minutes !== 0) {
-      strTime += `${minutes}m`;
-    }
+  if (duration < 60000) {
+    strTime = `${seconds}s`;
+  } else if (hours === 0) {
+    strTime += `${hours}m`;
+    strTime += `${seconds}s`;
+  } else if (days === 0) {
+    strTime += `${hours}h`;
+    strTime += `${minutes}m`;
+  } else if (years == 0) {
+    strTime += `${days}d`;
+    strTime += `${hours}h`;
   } else {
-    if (years !== 0) {
-      strTime += `${years}y`
-    }
-    if (days !== 0) {
-      strTime += `${days}d `
-    }
+    strTime += `${years}y`;
+    strTime += `${days}d`;
   }
   return strTime;
 };
@@ -95,7 +87,10 @@ function filterWeebMessages(messages, username) {
 };
 
 async function getUserMessages(channel, username) {
-  channel = 'forsen';
+  // while testing
+  if (channel === 'ablacs') {
+    channel = 'forsen';
+  }
   return await axios.default.get(`https://logs.ivr.fi/channel/${channel}/user/${username}`);
 };
 
@@ -123,83 +118,63 @@ async function getAnimeInfo(title) {
 }
 
 function onMessageHandler(channel, context, msg, self) {
-  if (self || context['username'] === 'Supibot') { return; }
+  if (self || context['display-name'] === 'Supibot' || context['display-name'] === 'sdnb_') { return; }
 
-  let message;
-  const userMessage = msg.replace('󠀀', '').trim().split(' ').filter((x) => x !== '');
+  const userMessage = msg
+    .replace('󠀀', '')
+    .trim()
+    .split(/ (.+)/)
+    .filter((x) => x !== '');
 
   switch (userMessage.length) {
     case 1:
-      // Ping
-      if (userMessage[0] === '**ping') {
-        message = `@${context['display-name']} Karen Kujou on duty AYAYA (${msToTime(new Date() - startTime)}).`;
-      }
-      // Check current Channel
-      else if (userMessage[0] === '**latest') {
-        // Check if bans were registered
-        if (latestBans[channel.slice(1).toLowerCase()].length) {
-          message = `@${context['display-name']} the last banned users were: ${latestBans[channel.slice(1)].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago) `)}`
-        }
-        message = `@${context['display-name']} No bans were registered.`
-      }
-      // AYAYA
-      else if (userMessage[0] === 'AYAYA') {
-        message = `@${context['display-name']} AYAYA`;
-      }
-      // nyanPls
-      else if (userMessage[0] === 'nyanPls') {
-        message = '✨ nyanPls 🌸  ';
-      }
-      // cute chat
-      else if (userMessage[0] === '**cute') {
-        message = '🌸 ✌ ️ AYAYA ✨ ⣰⠟⢷⡀⣿⠄⣿⠘⢻⡟⠃⣿⠛⠛⠄⠄⣰⠟⢷⡀⣿⠄⣿⠄⢠⣿⠄⠛⣿⠛ ⣿⠄⠄⠄⣿⠄⣿⠄⢸⡇⠄⣿⠶⠶⠄⠄⣿⠄⠄⠄⣿⠶⣿⠄⣼⣈⡇⠄⣿⠄ ⠹⣦⡾⠁⠻⣤⠟⠄⢸⡇⠄⣿⣤⣤⠄⠄⠹⣦⡾⠁⣿⠄⣿⢠⡏⠉⢻⠄⣿⠄'
-      }
-      // join raid
-      else if (userMessage[0] === '**join') {
-        message = '+join';
-      }
-      // force ed
-      else if (userMessage[0] === '**fed' && context['display-name'] === process.env.BOTRUNNER) {
-        message = `${lastSentMessage === '+ed' ? '+ed'.concat(blankText) : '+ed'}`;
-        client.say(channel, message);
-        lastSentMessage = message;
+      if (userMessage[0] === 'AYAYA') {
+        spamProtection(channel, `@${context['display-name']} AYAYA`);
+        return;
+      } else if (userMessage[0] === 'nyanPls') {
+        spamProtection(channel, '✨ nyanPls 🌸  ');
+        return;
+      } else if (userMessage[0] === '**ping') {
+        spamProtection(
+          channel,
+          `@${context['display-name']} Karen Kujou on duty AYAYA (${msToTime(new Date() - startTime)}).`
+        );
+        return;
+      } else if (userMessage[0] === '**cute') {
+        spamProtection(
+          channel,
+          '🌸 ✌ ️ AYAYA ✨ ⣰⠟⢷⡀⣿⠄⣿⠘⢻⡟⠃⣿⠛⠛⠄⠄⣰⠟⢷⡀⣿⠄⣿⠄⢠⣿⠄⠛⣿⠛ ⣿⠄⠄⠄⣿⠄⣿⠄⢸⡇⠄⣿⠶⠶⠄⠄⣿⠄⠄⠄⣿⠶⣿⠄⣼⣈⡇⠄⣿⠄ ⠹⣦⡾⠁⠻⣤⠟⠄⢸⡇⠄⣿⣤⣤⠄⠄⠹⣦⡾⠁⣿⠄⣿⢠⡏⠉⢻⠄⣿⠄'
+        );
+        return;
+      } else if (userMessage[0] === '**fed' && context['display-name'] === process.env.BOTRUNNER) {
+        spamProtection(channel, '+ed', 0);
         if (timer) {
           clearInterval(timer);
         }
         timer = startEDTimer(channel);
         return;
-        // random weeb message
-      } else if (userMessage[0] === '**rwm') {
-        if (channel === '#ablacs' || channelsList.channels.some((ch) => ch.name === channel.slice(1))) {
-          getUserMessages(channel.slice(1), context['display-name'])
-            .then((r) => {
-              const weebMessages = filterWeebMessages(r.data.split('\n'), context['display-name']);
-              if (!weebMessages.length) {
-                spamProtection(channel, `${context['display-name']} I couldn't find weeb emotes on your logs.`);
-                return;
-              }
+      } else if (userMessage[0] === '**join') {
+        spamProtection(channel, '+join');
+        return;
+      } else if (userMessage[0] === '**rwm' && (channelsList.some((ch) => ch === channel.slice(1)) || channel === '#ablacs')) {
+        let message;
+        getUserMessages(channel.slice(1), context['display-name'])
+          .then((r) => {
+            const weebMessages = filterWeebMessages(r.data.split('\n'), context['display-name']);
+            if (!weebMessages.length) {
+              message = `${context['display-name']} I couldn't find weeb emotes on your logs.`;
+            } else {
               const rMessage = weebMessages[Math.floor(Math.random() * weebMessages.length)];
-              spamProtection(channel, `(${msToTime(new Date() - new Date(rMessage.substring(1, rMessage.indexOf(' '))))} ago) ${rMessage.substring(rMessage.indexOf(context['display-name'].toLowerCase()))}`);
-            });
-        }
+              message = `(${msToTime(new Date() - new Date(rMessage.substring(1, rMessage.indexOf(' '))))} ago) ${rMessage.substring(rMessage.indexOf(context['display-name'].toLowerCase()))}`;
+            }
+            spamProtection(channel, message, 5000);
+          });
+        return;
       }
-      break;
+      return;
     case 2:
-      // Registered bans on <CHANNEL>
-      if (userMessage[0] === '**latest') {
-        if (Object.keys(latestBans).indexOf(userMessage[1]) !== -1) {
-          if (latestBans[userMessage[1]].length) {
-            message = `@${context['display-name']} the last banned users in ${userMessage[1]} were: ${latestBans[userMessage[1]].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago)`)}`
-            client.say(channel, `${blank ? message : message.concat(blankText)}`);
-          } else {
-            message = `@${context['display-name']} No bans registered in ${userMessage[1]} channel.`;
-          }
-        } else {
-          message = `@${context['display-name']} This channel is not being monitored.`;
-        }
-      }
-      // Check if user is a weeb
-      else if (userMessage[0] === '**weeb' && (!timeSinceWeebCheck || (new Date() - timeSinceWeebCheck) >= 10000)) {
+      if (userMessage[0] === '**weeb' && (channelsList.some((ch) => ch === channel.slice(1)) || channel === '#ablacs')) {
+        let message;
         getUserMessages(channel.slice(1), userMessage[1])
           .then((r) => {
             const weebMessages = filterWeebMessages(r.data.split('\n'), userMessage[1]);
@@ -208,11 +183,10 @@ function onMessageHandler(channel, context, msg, self) {
             } else {
               message = `@${context['display-name']} I didn't find weeb emotes on ${userMessage[1]} logs. 😢 `;
             }
-            spamProtection(channel, message, 0);
+            spamProtection(channel, message, 5000);
           });
-      }
-      // Anime description
-      else if (userMessage[0] === '**anime') {
+        return;
+      } else if (userMessage[0] === '**anime') {
         getAnimeInfo(userMessage[1])
           .then((r) => {
             const animeDescription = r.data.Media.description
@@ -220,15 +194,27 @@ function onMessageHandler(channel, context, msg, self) {
               .replace(/<[^>]*>?/gm, '')
               .replace('\n', '')
               .trim();
-            message = `[${r.data.Media.episodes} EP] ${animeDescription.length > 180 ? animeDescription.slice(0, 180).concat('...') : animeDescription}`;
-            spamProtection(channel, message);
+            spamProtection(
+              channel,
+              `[${r.data.Media.episodes} EP] ${animeDescription.length > 180 ? animeDescription.slice(0, 180).concat('...') : animeDescription}`,
+              5000
+            );
           });
+        return;
+      } else if (userMessage[0] === '**latest') {
+        let message;
+        if (channels.some((ch) => ch === userMessage[1])) {
+          if (latestBans[userMessage[1]].length) {
+            message = `@${context['display-name']} the last banned users in ${userMessage[1]} were: ${latestBans[userMessage[1]].map((user) => `${user.username} (${msToTime(new Date() - user.time)} ago)`)}`
+          } else {
+            message = `@${context['display-name']} No bans registered in ${userMessage[1]} channel.`;
+          }
+        } else {
+          message = `@${context['display-name']} This channel is not being monitored.`;
+        }
+        spamProtection(channel, message)
       }
-      break;
-  };
-  if (message) {
-    console.log(`${context['display-name']} [username]: ${userMessage} [usermessage] ${message} [output]`);
-    spamProtection(channel, message);
+      return;
   }
 }
 

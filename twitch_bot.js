@@ -9,8 +9,12 @@ const latestBans = {};        // BAN LIST
 let lastSentMessage = ''      // LAST MESSAGE SENT
 let timeSinceLastMessage;     // TIME SINCE LAST MESSAGE. SPAM CONTROL
 const channelsList = [];      // CHANNELS THAT ARE MONITORED BY justlog
+const helpURL = 'www.pastebin.com/NEfnPtbT'
 
-const channels = []
+const channels = [
+  'ablacs',
+  'forsen'
+]
 
 channels.map((ch) => latestBans[ch] = []);
 
@@ -171,6 +175,9 @@ function onMessageHandler(channel, context, msg, self) {
             spamProtection(channel, message, 5000);
           });
         return;
+      } else if (userMessage[0] === '**help') {
+        spamProtection(channel, helpURL.replaceAll('.', '(dot)'));
+        return
       }
       return;
     case 2:
@@ -240,4 +247,4 @@ function onBanUserHandler(channel, username) {
 function onConnectedHandler(addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
   startTime = new Date();
-}
+};

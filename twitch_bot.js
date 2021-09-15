@@ -10,11 +10,7 @@ let lastSentMessage = ''      // LAST MESSAGE SENT
 let timeSinceLastMessage;     // TIME SINCE LAST MESSAGE. SPAM CONTROL
 const channelsList = [];      // CHANNELS THAT ARE MONITORED BY justlog
 
-const channels = [
-  'ablacs',
-  'gugafuedon',
-  'forsen'
-]
+const channels = []
 
 channels.map((ch) => latestBans[ch] = []);
 
@@ -118,7 +114,7 @@ async function getAnimeInfo(title) {
 }
 
 function onMessageHandler(channel, context, msg, self) {
-  if (self || context['display-name'] === 'Supibot' || context['display-name'] === 'sdnb_') { return; }
+  if (self || context['display-name'] === 'Supibot') { return; }
 
   const userMessage = msg
     .replace('󠀀', '')

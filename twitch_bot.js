@@ -1,5 +1,6 @@
 const tmi = require('tmi.js');
 const axios = require('axios');
+const cheerio = require('cheerio');
 require('dotenv').config();
 
 let timer;                    // +ED TIME
@@ -9,7 +10,7 @@ const latestBans = {};        // BAN LIST
 let lastSentMessage = ''      // LAST MESSAGE SENT
 let timeSinceLastMessage;     // TIME SINCE LAST MESSAGE. SPAM CONTROL
 const channelsList = [];      // CHANNELS THAT ARE MONITORED BY justlog
-const helpURL = 'www.pastebin.com/NEfnPtbT'
+const helpURL = 'www (dot) pastebin (dot) com/NEfnPtbT'
 
 const channels = [
   'ablacs',
@@ -120,6 +121,18 @@ async function getAnimeInfo(title) {
   } catch (err) {
     return err.response;
   };
+};
+
+async function getRandomPasta() {
+  let pasta;
+  await axios.default.get('https://www.twitchquotes.com/random').then((r) => {
+    const html = r.data;
+    const $ = cheerio.load(html);
+    $('div', '.custom-scroll').each((i, elm) => {
+      pasta = $(elm).children().text();
+    });
+  });
+  return pasta;
 }
 
 function onMessageHandler(channel, context, msg, self) {
@@ -176,8 +189,17 @@ function onMessageHandler(channel, context, msg, self) {
           });
         return;
       } else if (userMessage[0] === '**help') {
-        spamProtection(channel, helpURL.replaceAll('.', '(dot)'));
+        spamProtection(channel, helpURL);
         return
+      } else if (userMessage[0] === '**pasta') {
+        getRandomPasta()
+        .then((pasta) => {
+          pasta = pasta.trim().replace('twitchquotes:', '');
+          if (pasta !== 'show copypasta [NSFW]') {
+            spamProtection(channel, pasta.length > 185 ? pasta.slice(0, 185).concat('...') : pasta);
+            return;
+          }
+        });
       }
       return;
     case 2:
@@ -226,7 +248,7 @@ function onMessageHandler(channel, context, msg, self) {
         }
         spamProtection(channel, message)
       } else if (userMessage[0] === '**draw') {
-        
+
       }
       return;
   }

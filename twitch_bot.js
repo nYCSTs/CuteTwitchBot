@@ -107,10 +107,15 @@ async function getAnimeInfo(title) {
     "search": title
   }
 
-  return await axios.default.post('https://graphql.anilist.co/', {
-    query: query,
-    variables
-  }).then((r) => r.data);
+  try {
+    const animeData = await axios.default.post('https://graphql.anilist.co/', {
+      query: query,
+      variables
+    }).then((r) => r.data);
+    return animeData;
+  } catch (err) {
+    return err.response;
+  };
 }
 
 function onMessageHandler(channel, context, msg, self) {
@@ -185,6 +190,10 @@ function onMessageHandler(channel, context, msg, self) {
       } else if (userMessage[0] === '**anime') {
         getAnimeInfo(userMessage[1])
           .then((r) => {
+            if (r.status) {
+              spamProtection(channel, `@${context['display-name']} Anime not found`);
+              return;
+            }
             const animeDescription = r.data.Media.description
               .slice(0, r.data.Media.description.indexOf('<br>'))
               .replace(/<[^>]*>?/gm, '')
@@ -209,6 +218,8 @@ function onMessageHandler(channel, context, msg, self) {
           message = `@${context['display-name']} This channel is not being monitored.`;
         }
         spamProtection(channel, message)
+      } else if (userMessage[0] === '**draw') {
+        
       }
       return;
   }

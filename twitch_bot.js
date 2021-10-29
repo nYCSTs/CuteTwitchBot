@@ -136,7 +136,7 @@ async function getRandomPasta() {
 }
 
 function onMessageHandler(channel, context, msg, self) {
-  if (self || (new Date().getHours > 14 && new Date().getHours < 20) || context['display-name'] === 'Supibot') { return; }
+  if (self || RUNNING_BOT == true || (new Date().getHours() >= 14 && new Date().getHours() < 20) || context['display-name'] === 'Supibot') { return; }
 
   const userMessage = msg
     .replace('󠀀', '')
@@ -196,7 +196,7 @@ function onMessageHandler(channel, context, msg, self) {
         .then((pasta) => {
           pasta = pasta.trim().replace('twitchquotes:', '');
           if (pasta !== 'show copypasta [NSFW]') {
-            spamProtection(channel, pasta.length > 185 ? pasta.slice(0, 185).concat('...') : pasta);
+            spamProtection(channel, pasta.length > 177 ? pasta.slice(0, 177).concat('...') : pasta);
             return;
           }
         });
